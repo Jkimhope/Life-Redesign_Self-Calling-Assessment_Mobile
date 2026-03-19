@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>소명 진단</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;font-family:'Noto Sans KR',sans-serif;background:#f7f5f0;}
+:root{
+  --gold:#C4922A;--gold-dim:#E8D5A3;--gold-bg:#FDF8EF;
+  --ink:#1C1A15;--mid:#6B6456;--faint:#B0A898;
+  --bg:#F7F5F0;--card:#FFFFFF;--border:#EAE5DC;--radius:16px;
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+.shell{position:fixed;inset:0;display:flex;flex-direction:column;max-width:480px;margin:0 auto;background:var(--bg);}
+.topbar{flex-shrink:0;padding:14px 20px 10px;display:flex;align-items:center;gap:12px;background:var(--bg);border-bottom:1px solid var(--border);}
+.back-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:var(--card);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--mid);font-size:18px;flex-shrink:0;transition:background .15s;}
+.back-btn:active{background:var(--border);}
+.topbar-center{flex:1;min-width:0;}
+.module-label{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.08em;text-transform:uppercase;margin-bottom:2px;}
+.module-title{font-size:14px;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.step-count{font-size:12px;font-weight:500;color:var(--faint);white-space:nowrap;}
+.progress{flex-shrink:0;height:3px;background:var(--border);}
+.progress-fill{height:100%;background:var(--gold);transition:width .4s cubic-bezier(.4,0,.2,1);}
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
+.scroll-inner{padding:20px 16px 32px;}
+.q-card{background:var(--card);border-radius:var(--radius);padding:20px;margin-bottom:12px;border:1px solid var(--border);animation:slideUp .22s ease both;}
+@keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.q-num{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;}
+.q-text{font-size:16px;font-weight:500;color:var(--ink);line-height:1.55;margin-bottom:16px;}
+.q-sub{font-size:12px;color:var(--faint);margin:-8px 0 12px;}
+.chips{display:flex;flex-wrap:wrap;gap:8px;}
+.chip{padding:10px 16px;border-radius:24px;border:1.5px solid var(--border);background:var(--bg);font-size:14px;color:var(--mid);cursor:pointer;transition:all .15s;font-family:'Noto Sans KR',sans-serif;line-height:1.3;user-select:none;}
+.chip:active{transform:scale(.96);}
+.chip.sel{background:var(--gold-bg);border-color:var(--gold);color:var(--gold);font-weight:600;}
+.pairs{display:flex;flex-direction:column;gap:10px;}
+.pair-row{display:flex;gap:8px;}
+.pair-chip{flex:1;padding:11px 8px;text-align:center;border-radius:12px;border:1.5px solid var(--border);background:var(--bg);font-size:13px;color:var(--mid);cursor:pointer;transition:all .15s;font-family:'Noto Sans KR',sans-serif;line-height:1.4;user-select:none;}
+.pair-chip:active{transform:scale(.97);}
+.pair-chip.sel{background:var(--gold-bg);border-color:var(--gold);color:var(--gold);font-weight:600;}
+.sliders{display:flex;flex-direction:column;}
+.sl-row{padding:10px 0;border-bottom:1px solid var(--border);}
+.sl-row:last-child{border-bottom:none;}
+.sl-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.sl-name{font-size:14px;color:var(--ink);}
+.sl-val{font-size:16px;font-weight:700;color:var(--gold);}
+.sl-dots{display:flex;justify-content:space-between;}
+.sl-dot{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--border);background:var(--card);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:500;color:var(--faint);cursor:pointer;transition:all .15s;user-select:none;}
+.sl-dot:active{transform:scale(.9);}
+.sl-dot.sel{background:var(--gold);border-color:var(--gold);color:#fff;font-weight:700;}
+.sl-ends{display:flex;justify-content:space-between;margin-top:4px;}
+.sl-end{font-size:10px;color:var(--faint);}
+.fill-wrap{display:flex;flex-direction:column;gap:12px;}
+.fill-row{display:flex;flex-direction:column;gap:4px;}
+.fill-label{font-size:12px;color:var(--mid);font-weight:600;}
+.fill-input{width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg);font-size:15px;color:var(--ink);font-family:'Noto Sans KR',sans-serif;outline:none;transition:border-color .15s;}
+.fill-input:focus{border-color:var(--gold);background:#fff;}
+.fill-input::placeholder{color:var(--faint);}
+.bottom{flex-shrink:0;padding:12px 16px calc(12px + var(--safe-bottom));background:var(--bg);border-top:1px solid var(--border);}
+.btn-row{display:flex;gap:8px;}
+.next-btn{flex:1;padding:15px;border-radius:14px;border:none;background:var(--gold);color:#fff;font-size:16px;font-weight:700;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:all .15s;}
+.next-btn:active{transform:scale(.98);background:#A87820;}
+.back-action{width:52px;padding:15px 0;border-radius:14px;border:1.5px solid var(--border);background:var(--card);color:var(--mid);font-size:20px;cursor:pointer;font-family:sans-serif;transition:all .15s;}
+.back-action:active{background:var(--border);}
+.full-screen{position:fixed;inset:0;max-width:480px;margin:0 auto;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center;z-index:10;}
+.full-screen.hidden{display:none;}
+.logo-ring{width:72px;height:72px;border-radius:50%;border:2px solid var(--gold-dim);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;background:var(--gold-bg);}
+.logo-inner{width:48px;height:48px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;}
+.welcome-kicker{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:12px;}
+.welcome-h{font-size:28px;font-weight:700;color:var(--ink);line-height:1.25;margin-bottom:12px;}
+.welcome-h em{color:var(--gold);font-style:normal;}
+.welcome-p{font-size:15px;color:var(--mid);line-height:1.7;margin-bottom:28px;}
+.pill-row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:32px;}
+.pill{padding:7px 14px;border-radius:20px;background:var(--card);border:1px solid var(--border);font-size:12px;color:var(--mid);}
+.pill b{color:var(--gold);}
+.start-btn{width:100%;padding:16px;border-radius:14px;border:none;background:var(--gold);color:#fff;font-size:17px;font-weight:700;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:all .15s;}
+.start-btn:active{background:#A87820;transform:scale(.98);}
+.mod-intro{text-align:center;padding:28px 4px 8px;}
+.mod-icon{width:56px;height:56px;border-radius:18px;background:var(--gold-bg);border:1.5px solid var(--gold-dim);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:24px;}
+.mod-intro h2{font-size:20px;font-weight:700;color:var(--ink);margin-bottom:6px;}
+.mod-intro p{font-size:14px;color:var(--mid);line-height:1.6;}
+.result-section{position:fixed;inset:0;max-width:480px;margin:0 auto;background:var(--bg);display:none;flex-direction:column;}
+.result-section.show{display:flex;}
+.result-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.result-inner{padding:20px 16px 48px;}
+.result-hero{background:var(--gold-bg);border:1.5px solid var(--gold-dim);border-radius:var(--radius);padding:20px;margin-bottom:12px;}
+.result-kicker{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;}
+.result-hero h2{font-size:21px;font-weight:700;color:var(--ink);line-height:1.35;margin-bottom:10px;}
+.result-hero h2 em{color:var(--gold);font-style:normal;}
+.result-hero p{font-size:14px;color:var(--mid);line-height:1.7;}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;}
+.rtag{padding:6px 12px;border-radius:20px;font-size:12px;font-weight:500;background:#fff;border:1px solid var(--gold-dim);color:var(--gold);}
+.result-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:10px;}
+.result-card h3{font-size:15px;font-weight:700;color:var(--ink);margin-bottom:12px;}
+.axis-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.axis-lbl{font-size:13px;color:var(--mid);width:90px;flex-shrink:0;}
+.axis-track{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden;}
+.axis-bar{height:100%;border-radius:3px;background:var(--gold);transition:width 1.1s cubic-bezier(.4,0,.2,1);}
+.axis-pct{font-size:12px;font-weight:700;color:var(--gold);width:32px;text-align:right;flex-shrink:0;}
+.vision-block{background:var(--gold-bg);border-left:3px solid var(--gold);border-radius:0 10px 10px 0;padding:14px;font-size:15px;color:var(--ink);line-height:1.8;font-style:italic;}
+.result-btns{display:flex;flex-direction:column;gap:8px;margin-top:4px;}
+.save-btn{width:100%;padding:15px;border-radius:14px;border:none;background:var(--gold);color:#fff;font-size:15px;font-weight:700;font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:all .15s;}
+.save-btn:active{background:#A87820;}
+.ai-btn{width:100%;padding:15px;border-radius:14px;border:1.5px solid var(--gold);background:var(--card);color:var(--gold);font-size:15px;font-weight:700;font-family:'Noto Sans KR',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s;}
+.ai-btn:active{background:var(--gold-bg);}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--ink);color:#F5EDD8;font-size:13px;font-family:'Noto Sans KR',sans-serif;padding:10px 18px;border-radius:24px;opacity:0;transition:all .25s;z-index:999;white-space:nowrap;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- WELCOME -->
+<div class="full-screen" id="welcomeScreen">
+  <div class="logo-ring"><div class="logo-inner">&#9733;</div></div>
+  <div class="welcome-kicker">Life Redesign</div>
+  <h1 class="welcome-h">나의 <em>소명</em>을<br>찾아서</h1>
+  <p class="welcome-p">7개 영역, 31개 질문으로<br>당신만의 인생 2막 소명을 찾아드립니다.</p>
+  <div class="pill-row">
+    <div class="pill">&#9201; 약 <b>10~15분</b></div>
+    <div class="pill">&#128203; <b>31</b>개 질문</div>
+    <div class="pill">&#128274; 결과 <b>저장됨</b></div>
+  </div>
+  <button class="start-btn" id="startBtn">진단 시작하기</button>
+</div>
+
+<!-- MAIN SHELL -->
+<div class="shell" id="mainShell" style="display:none;">
+  <div class="topbar">
+    <div class="back-btn" id="topBackBtn">&#8249;</div>
+    <div class="topbar-center">
+      <div class="module-label" id="topLabel">영역 1</div>
+      <div class="module-title" id="topTitle">기본 정보</div>
+    </div>
+    <div class="step-count" id="stepCount"></div>
+  </div>
+  <div class="progress"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  <div class="scroll" id="scrollArea">
+    <div class="scroll-inner" id="questionArea"></div>
+  </div>
+  <div class="bottom">
+    <div class="btn-row">
+      <button class="back-action" id="backBtn">&#8249;</button>
+      <button class="next-btn" id="nextBtn">다음</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESULT -->
+<div class="result-section" id="resultSection">
+  <div class="topbar">
+    <div class="back-btn" id="resultBackBtn">&#8249;</div>
+    <div class="topbar-center">
+      <div class="module-label">진단 완료</div>
+      <div class="module-title">나의 소명 프로필</div>
+    </div>
+  </div>
+  <div class="progress"><div style="height:100%;width:100%;background:var(--gold);"></div></div>
+  <div class="result-scroll">
+    <div class="result-inner">
+      <div class="result-hero">
+        <div class="result-kicker">소명 프로필 요약</div>
+        <h2 id="resultTitle">당신의 <em>소명</em>이<br>보이기 시작합니다</h2>
+        <p id="resultNarrative"></p>
+        <div class="tag-row" id="resultTags"></div>
+      </div>
+      <div class="result-card">
+        <h3>4가지 영역 점수</h3>
+        <div id="axisResults"></div>
+      </div>
+      <div class="result-card">
+        <h3>나의 소명 선언문</h3>
+        <div class="vision-block" id="visionResult"></div>
+      </div>
+      <div class="result-btns">
+        <button class="save-btn" id="saveBtn">결과 저장하기</button>
+        <button class="ai-btn" id="aiBtn">AI 소명 진단서 받기 &#8599;</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var ans = {};
+var step = 0;
+
+var MODULES = [
+  {label:'영역 1', title:'기본 정보', icon:'&#128100;'},
+  {label:'영역 2', title:'내가 잘하는 것', icon:'&#128188;'},
+  {label:'영역 3', title:'성격과 성품', icon:'&#127807;'},
+  {label:'영역 4', title:'무엇이 나를 움직이나', icon:'&#128293;'},
+  {label:'영역 5', title:'믿음과 은사', icon:'&#10024;'},
+  {label:'영역 6', title:'내가 가진 것', icon:'&#127807;'},
+  {label:'영역 7', title:'내가 꿈꾸는 소명', icon:'&#127919;'},
+];
+
+var STEPS = [
+  // ── 영역 1 ──
+  {mod:0, id:'age', type:'single', q:'현재 나이대를 알려주세요.',
+   opts:['30대','40대','50대','60대 이상']},
+  {mod:0, id:'domain', type:'multi', q:'주로 일해온 분야를 선택해 주세요.',
+   opts:['금융·회계','IT·기술','교육','제조·엔지니어링','의료·보건','법률','창작·디자인','비영리·NGO','교회·사역','기타']},
+  {mod:0, id:'horizon', type:'single', q:'직장이나 커리어를 바꿀 계획이 언제쯤인가요?',
+   opts:['3년 안에','5년 안에','10년 안에','이미 바꿨어요','아직 생각 없어요']},
+  {mod:0, id:'time', type:'single', q:'새로운 활동에 일주일에 얼마나 시간을 쓸 수 있나요?',
+   opts:['주 2~5시간','주 5~10시간','주 10~20시간','주 20시간 이상 (거의 전업)']},
+  {mod:0, id:'family', type:'single', q:'지금 가족 상황은 어떤가요?',
+   opts:['혼자 살아요','결혼해서 아이 키우는 중','아이들 다 독립했어요','부모님 돌보는 중','손주 돌보는 나이예요']},
+
+  // ── 영역 2 ──
+  {mod:1, intro:true, desc:'지금까지 쌓아온 전문성과 실력을 살펴봅니다.'},
+  {mod:1, id:'skills', type:'multi3', q:'내가 가장 자신 있는 분야를 3개까지 고르세요.',
+   opts:['계획·전략 짜기','재무·회계','가르치기·발표','상담·경청하기','엔지니어링·기술','글쓰기·소통','팀 이끌기','연구·분석','디자인·시각화','영업·설득','운영·관리','의료·임상']},
+  {mod:1, id:'competency', type:'sliders', q:'다음 능력이 얼마나 되는지 솔직하게 체크해 주세요.',
+   ends:['초보 수준','전문가 수준'],
+   items:[
+     {id:'sl_strat', name:'계획 세우기·문서 작성'},
+     {id:'sl_digital', name:'디지털·AI 도구 쓰기'},
+     {id:'sl_cross', name:'외국어·다문화 소통'},
+     {id:'sl_facil', name:'가르치기·훈련시키기'},
+     {id:'sl_network', name:'인맥 만들고 연결하기'},
+     {id:'sl_conflict', name:'갈등 해결·중재하기'},
+   ]},
+  {mod:1, id:'credential', type:'single', q:'지금까지 쌓은 가장 높은 전문성 수준은?',
+   opts:['직업·기술 자격증','대학 졸업','대학원 석사','박사','임원·고위직 경험','창업·사업 운영']},
+
+  // ── 영역 3 ──
+  {mod:2, intro:true, desc:'겉으로 드러난 실력보다 내면의 성품과 성격 패턴을 살펴봅니다.'},
+  {mod:2, id:'mbti', type:'pairs', q:'각 줄에서 나에게 더 가까운 쪽을 골라주세요.',
+   pairs:[
+     {id:'ei', a:'사람들과 함께할 때 힘이 나요', b:'혼자 있을 때 힘이 나요'},
+     {id:'sn', a:'눈앞에 보이는 현실을 중시해요', b:'앞으로의 비전과 가능성을 봐요'},
+     {id:'tf', a:'논리와 사실로 결정해요', b:'가치관과 감정으로 결정해요'},
+     {id:'jp', a:'계획대로 깔끔하게 마무리해요', b:'유연하게 열어두는 걸 좋아해요'},
+   ]},
+  {mod:2, id:'character', type:'sliders', q:'다음 성품이 나에게 얼마나 해당하는지 표시해 주세요.',
+   ends:['거의 아님','완전히 나'],
+   items:[
+     {id:'ch_persist', name:'힘들어도 끝까지 버텨요'},
+     {id:'ch_empathy', name:'남의 아픔에 공감을 잘 해요'},
+     {id:'ch_curiosity', name:'새로운 걸 배우는 걸 즐겨요'},
+     {id:'ch_courage', name:'불확실해도 용기 내어 도전해요'},
+     {id:'ch_humility', name:'내가 틀릴 수 있다고 생각해요'},
+     {id:'ch_initiative', name:'시키지 않아도 먼저 나서요'},
+   ]},
+  {mod:2, id:'decision', type:'single', q:'중요한 결정을 내릴 때 나는 주로...',
+   opts:['자료를 모아서 꼼꼼하게 따져요','일단 느낌을 먼저 믿어요','믿는 사람들 의견을 먼저 들어요','혼자 조용히 생각할 시간이 필요해요','해보면서 고쳐 나가요']},
+  {mod:2, id:'adversity', type:'single', q:'살면서 나를 가장 많이 다듬은 어려움은?',
+   opts:['상실 — 이별·사별·슬픔','실패 — 일이나 관계의 무너짐','질병 — 나 또는 가족의 건강 위기','부당함 — 차별이나 억울한 경험','이주 — 낯선 곳에서 새로 시작','탈진 — 지쳐서 의미를 잃은 경험','답하지 않겠어요']},
+
+  // ── 영역 4 ──
+  {mod:3, intro:true, desc:'나를 오래 움직이게 하는 깊은 동기와 가치관을 찾아봅니다.'},
+  {mod:3, id:'motivators', type:'multi3', q:'일할 때 가장 신이 나는 이유를 3개 고르세요.',
+   opts:['누군가의 삶이 눈에 띄게 변할 때','내 실력이 더 깊어질 때','내 방식대로 자유롭게 할 때','함께하는 공동체가 있을 때','불의를 바로잡을 때','오래 남을 무언가를 만들 때','새로운 것을 발견하고 배울 때','인정받고 소중하게 여겨질 때']},
+  {mod:3, id:'flow', type:'single', q:'시간 가는 줄 모르고 완전히 빠져드는 순간은?',
+   opts:['내가 잘 아는 것을 가르칠 때','어려운 문제를 끝까지 풀어낼 때','힘든 사람 곁에서 함께할 때','아무것도 없는 곳에서 무언가를 만들 때','복잡한 것을 깔끔하게 정리할 때','사람들을 한 방향으로 이끌 때','혼자 깊이 집중해서 연구할 때']},
+  {mod:3, id:'values', type:'sliders', q:'다음 가치관이 내 삶에서 얼마나 중요한지 표시해 주세요.',
+   ends:['별로 중요 안 함','절대 포기 못 함'],
+   items:[
+     {id:'v_service', name:'다른 사람을 섬기는 것'},
+     {id:'v_truth', name:'진실하고 솔직한 것'},
+     {id:'v_family', name:'가족과 관계를 지키는 것'},
+     {id:'v_justice', name:'공평하고 정의로운 것'},
+     {id:'v_faith', name:'믿음에 신실한 것'},
+     {id:'v_achiev', name:'뛰어난 성과를 내는 것'},
+   ]},
+  {mod:3, id:'risk', type:'single', q:'새로운 도전 앞에서 나는...',
+   opts:['불확실해도 뛰어드는 편이에요','충분히 파악하면 도전해요','조금씩 천천히 바꾸는 걸 선호해요','안정적인 기반이 있어야 움직여요']},
+
+  // ── 영역 5 ──
+  {mod:4, intro:true, desc:'하나님이 나에게 주신 은사와 현재 믿음의 상태를 살펴봅니다.'},
+  {mod:4, id:'gifts', type:'multi3', q:'내 안에서 자연스럽게 흘러나오는 은사를 3개 고르세요.',
+   opts:['가르침','예언·분별','긍휼·자비','헌금·구제','행정·조직','전도','목양·돌봄','지혜·권위','믿음·중보기도','봉사·섬김','리더십·비전','치유·회복']},
+  {mod:4, id:'spiritual', type:'single', q:'지금 나의 믿음 상태를 가장 잘 표현한 것은?',
+   opts:['찾는 중 — 아직 믿음의 기초를 세우는 단계','활발함 — 공동체에서 열심히 성장하는 중','깊어지는 중 — 규칙보다 은혜로 살려는 단계','흔들리는 중 — 믿음의 위기나 회복의 과정','통합됨 — 성숙하고 타인을 위해 사는 단계']},
+  {mod:4, id:'setting', type:'single', q:'나의 은사가 가장 잘 살아나는 환경은?',
+   opts:['1:1로 깊이 만나는 것','소그룹을 이끄는 것','많은 사람 앞에서 말하는 것','뒤에서 조용히 지원하는 것','현장에서 직접 몸으로 섬기는 것','다른 나라·문화권에서 사역하는 것']},
+  {mod:4, id:'readiness', type:'sliders', q:'다음 문장이 나에게 얼마나 해당하는지 표시해 주세요.',
+   ends:['아직 아님','완전히 그래'],
+   items:[
+     {id:'cr_know', name:'내가 무엇을 잘하는지 알아요'},
+     {id:'cr_burden', name:'꼭 도와야 할 것 같은 사람들이 있어요'},
+     {id:'cr_serve', name:'인정받지 않아도 섬길 수 있어요'},
+     {id:'cr_affirm', name:'주변에서 내 은사를 알아봐 줘요'},
+     {id:'cr_lead', name:'하나님이 이끄시는 방향이 느껴져요'},
+   ]},
+
+  // ── 영역 6 ──
+  {mod:5, intro:true, desc:'소명을 실제로 살아내기 위해 필요한 현실적인 조건을 확인합니다.'},
+  {mod:5, id:'economic', type:'single', q:'소명을 위해 돈 문제가 어떻게 되면 좋겠나요?',
+   opts:['이 활동으로 수입이 생겨야 해요','일부 수입만 생겨도 괜찮아요','돈은 이미 해결됐고 무료로 섬길 수 있어요','내가 오히려 돈을 투자하고 싶어요']},
+  {mod:5, id:'assets', type:'multi', q:'내가 기꺼이 쏟아부을 수 있는 것을 고르세요.',
+   opts:['시간과 직접 만나는 것','전문 지식과 경험','나의 인맥과 연결','돈·재정 지원','공간이나 물적 자원','내 이름값이나 영향력','콘텐츠·창작 능력']},
+  {mod:5, id:'orgtype', type:'single', q:'소명을 펼칠 이상적인 활동 방식은?',
+   opts:['혼자 독립적으로','소수 팀과 함께','교회·단체 같은 기존 조직 안에서','새로운 사회적 기업이나 단체를 만들어서','여러 곳을 연결하는 허브 역할로','기존 조직 안에서 자원봉사로']},
+
+  // ── 영역 7 ──
+  {mod:6, intro:true, desc:'이제 꿈꾸는 소명의 방향을 직접 표현해 봅니다.'},
+  {mod:6, id:'population', type:'multi', q:'내 마음이 가장 많이 향하는 사람들은?',
+   opts:['어린이·청소년','청년 (18~35세)','직장인·전문직','어르신·노인','도움이 필요한 소외 계층','해외·미전도 민족','가정·부부','기업인·리더']},
+  {mod:6, id:'pathway', type:'multi', q:'관심 있는 소명 방향을 선택해 주세요.',
+   opts:['어른들을 위한 교육','해외 전문인 선교','사회 문제를 해결하는 사업','상담·목양 사역','다음 세대 키우기','지역 사회 봉사','예술·문화·미디어','의료·치유 사역']},
+  {mod:6, id:'vision', type:'fill', q:'나의 소명 선언문을 완성해 주세요.',
+   fields:[
+     {id:'vs1', label:'나의 경험이나 전문성', placeholder:'예: 20년 재무 경력'},
+     {id:'vs2', label:'섬기고 싶은 사람들', placeholder:'예: 청년 창업가들'},
+     {id:'vs3', label:'내가 줄 수 있는 것', placeholder:'예: 돈 관리 능력과 방향'},
+     {id:'vs4', label:'궁극적인 꿈', placeholder:'예: 하나님 나라의 건강한 경제 생태계'},
+   ]},
+  {mod:6, id:'obstacle', type:'single', q:'소명을 향해 나아가는 데 가장 큰 걸림돌은?',
+   opts:['돈·생계 걱정','내가 뭘 잘하는지 모르겠어요','가족이나 주변의 반대','어디서 어떻게 시작할지 모르겠어요','하나님의 뜻이 아직 불확실해요','몸이 지치거나 건강 문제']},
+  {mod:6, id:'support', type:'multi', q:'어떤 도움이 필요하세요?',
+   opts:['나를 이끌어줄 코치나 멘토','비슷한 길을 가는 동료','구체적인 역할이나 기회 연결','훈련·교육 프로그램','영적 지도와 방향 잡기','재정 계획과 상담']},
+];
+
+var totalQ = STEPS.filter(function(s){return !s.intro;}).length;
+
+function getQIdx(si) {
+  return STEPS.slice(0, si+1).filter(function(s){return !s.intro;}).length;
+}
+
+function startAssessment() {
+  document.getElementById('welcomeScreen').classList.add('hidden');
+  document.getElementById('mainShell').style.display = 'flex';
+  render();
+}
+
+function render() {
+  var s = STEPS[step];
+  var mod = MODULES[s.mod];
+  var qi = getQIdx(step);
+  document.getElementById('topLabel').textContent = mod.label;
+  document.getElementById('topTitle').textContent = mod.title;
+  document.getElementById('stepCount').textContent = s.intro ? '' : (qi + ' / ' + totalQ);
+  document.getElementById('progressFill').style.width = ((qi / totalQ) * 100) + '%';
+  document.getElementById('backBtn').style.visibility = step === 0 ? 'hidden' : 'visible';
+  var btn = document.getElementById('nextBtn');
+  btn.textContent = step === STEPS.length - 1 ? '결과 보기' : (s.intro ? '시작' : '다음');
+
+  var area = document.getElementById('questionArea');
+  area.innerHTML = '';
+  document.getElementById('scrollArea').scrollTop = 0;
+
+  if (s.intro) {
+    var d = document.createElement('div');
+    d.className = 'mod-intro';
+    d.innerHTML = '<div class="mod-icon">' + mod.icon + '</div><h2>' + mod.label + '<br>' + mod.title + '</h2>' + (s.desc ? '<p style="margin-top:8px;">' + s.desc + '</p>' : '');
+    area.appendChild(d);
+    return;
+  }
+
+  var card = document.createElement('div');
+  card.className = 'q-card';
+  var qNum = document.createElement('div');
+  qNum.className = 'q-num';
+  qNum.textContent = qi + ' / ' + totalQ;
+  var qText = document.createElement('div');
+  qText.className = 'q-text';
+  qText.textContent = s.q;
+  card.appendChild(qNum);
+  card.appendChild(qText);
+
+  if (s.type === 'single' || s.type === 'multi' || s.type === 'multi3') {
+    if (s.type === 'multi3') {
+      var sub = document.createElement('div');
+      sub.className = 'q-sub';
+      sub.textContent = '최대 3개 선택 가능';
+      card.appendChild(sub);
+    }
+    if (s.type === 'multi') {
+      var sub2 = document.createElement('div');
+      sub2.className = 'q-sub';
+      sub2.textContent = '해당되는 것 모두 선택 가능';
+      card.appendChild(sub2);
+    }
+    var chips = document.createElement('div');
+    chips.className = 'chips';
+    s.opts.forEach(function(opt) {
+      var c = document.createElement('button');
+      c.className = 'chip';
+      c.textContent = opt;
+      var saved = ans[s.id];
+      if (s.type === 'single' && saved === opt) c.classList.add('sel');
+      if ((s.type === 'multi' || s.type === 'multi3') && Array.isArray(saved) && saved.indexOf(opt) > -1) c.classList.add('sel');
+      c.addEventListener('click', function() {
+        if (s.type === 'single') {
+          chips.querySelectorAll('.chip').forEach(function(x){x.classList.remove('sel');});
+          c.classList.add('sel');
+          ans[s.id] = opt;
+          setTimeout(function(){nextStep();}, 180);
+        } else if (s.type === 'multi') {
+          c.classList.toggle('sel');
+          if (!ans[s.id]) ans[s.id] = [];
+          var idx = ans[s.id].indexOf(opt);
+          if (idx === -1) ans[s.id].push(opt); else ans[s.id].splice(idx, 1);
+        } else {
+          var selCount = chips.querySelectorAll('.chip.sel').length;
+          if (!c.classList.contains('sel') && selCount >= 3) { showToast('최대 3개까지 선택할 수 있어요'); return; }
+          c.classList.toggle('sel');
+          if (!ans[s.id]) ans[s.id] = [];
+          var idx2 = ans[s.id].indexOf(opt);
+          if (idx2 === -1) ans[s.id].push(opt); else ans[s.id].splice(idx2, 1);
+        }
+      });
+      chips.appendChild(c);
+    });
+    card.appendChild(chips);
+
+  } else if (s.type === 'pairs') {
+    var pairs = document.createElement('div');
+    pairs.className = 'pairs';
+    s.pairs.forEach(function(p) {
+      var row = document.createElement('div');
+      row.className = 'pair-row';
+      [p.a, p.b].forEach(function(label, i) {
+        var c = document.createElement('button');
+        c.className = 'pair-chip';
+        c.textContent = label;
+        if (ans[p.id] === i) c.classList.add('sel');
+        c.addEventListener('click', function() {
+          row.querySelectorAll('.pair-chip').forEach(function(x){x.classList.remove('sel');});
+          c.classList.add('sel');
+          ans[p.id] = i;
+        });
+        row.appendChild(c);
+      });
+      pairs.appendChild(row);
+    });
+    card.appendChild(pairs);
+
+  } else if (s.type === 'sliders') {
+    var wrap = document.createElement('div');
+    wrap.className = 'sliders';
+    s.items.forEach(function(item) {
+      if (!ans[item.id]) ans[item.id] = 3;
+      var saved = ans[item.id];
+      var row = document.createElement('div');
+      row.className = 'sl-row';
+      var hdr = document.createElement('div');
+      hdr.className = 'sl-header';
+      var nm = document.createElement('span');
+      nm.className = 'sl-name';
+      nm.textContent = item.name;
+      var vl = document.createElement('span');
+      vl.className = 'sl-val';
+      vl.id = 'sv_' + item.id;
+      vl.textContent = saved;
+      hdr.appendChild(nm);
+      hdr.appendChild(vl);
+      row.appendChild(hdr);
+      var dots = document.createElement('div');
+      dots.className = 'sl-dots';
+      for (var v = 1; v <= 5; v++) {
+        (function(val) {
+          var dot = document.createElement('div');
+          dot.className = 'sl-dot' + (val === saved ? ' sel' : '');
+          dot.textContent = val;
+          dot.addEventListener('click', function() {
+            dots.querySelectorAll('.sl-dot').forEach(function(d){d.classList.remove('sel');});
+            dot.classList.add('sel');
+            ans[item.id] = val;
+            document.getElementById('sv_' + item.id).textContent = val;
+          });
+          dots.appendChild(dot);
+        })(v);
+      }
+      row.appendChild(dots);
+      if (s.ends) {
+        var ends = document.createElement('div');
+        ends.className = 'sl-ends';
+        ends.innerHTML = '<span class="sl-end">' + s.ends[0] + '</span><span class="sl-end">' + s.ends[1] + '</span>';
+        row.appendChild(ends);
+      }
+      wrap.appendChild(row);
+    });
+    card.appendChild(wrap);
+
+  } else if (s.type === 'fill') {
+    var fillWrap = document.createElement('div');
+    fillWrap.className = 'fill-wrap';
+    s.fields.forEach(function(f) {
+      var row = document.createElement('div');
+      row.className = 'fill-row';
+      var lbl = document.createElement('div');
+      lbl.className = 'fill-label';
+      lbl.textContent = f.label;
+      var inp = document.createElement('input');
+      inp.type = 'text';
+      inp.className = 'fill-input';
+      inp.placeholder = f.placeholder;
+      inp.value = ans[f.id] || '';
+      inp.addEventListener('input', function() { ans[f.id] = inp.value; });
+      row.appendChild(lbl);
+      row.appendChild(inp);
+      fillWrap.appendChild(row);
+    });
+    card.appendChild(fillWrap);
+  }
+
+  area.appendChild(card);
+}
+
+function nextStep() {
+  if (step >= STEPS.length - 1) { showResult(); return; }
+  step++;
+  render();
+}
+
+function prevStep() {
+  if (step > 0) { step--; render(); }
+}
+
+function showResult() {
+  document.getElementById('mainShell').style.display = 'none';
+  document.getElementById('resultSection').classList.add('show');
+  buildResult();
+}
+
+function buildResult() {
+  var pathMap = {
+    '어른들을 위한 교육':'시니어 교육',
+    '해외 전문인 선교':'글로벌 선교',
+    '사회 문제를 해결하는 사업':'사회적 창업',
+    '상담·목양 사역':'목양·상담',
+    '다음 세대 키우기':'다음 세대',
+    '지역 사회 봉사':'지역봉사',
+    '예술·문화·미디어':'예술·미디어',
+    '의료·치유 사역':'의료·치유'
+  };
+  var pathway = ans['pathway'] || [];
+  var gifts = ans['gifts'] || [];
+  var population = ans['population'] || [];
+  var age = ans['age'] || '50대';
+  var domain = (ans['domain'] || ['해당 분야'])[0];
+  var flow = ans['flow'] || '';
+
+  var tags = [];
+  pathway.slice(0,2).forEach(function(p){ tags.push(pathMap[p]||p); });
+  gifts.slice(0,2).forEach(function(g){ tags.push(g); });
+  population.slice(0,2).forEach(function(p){ tags.push(p); });
+  var tagsHTML = '';
+  tags.filter(Boolean).slice(0,6).forEach(function(t){ tagsHTML += '<span class="rtag">' + t + '</span>'; });
+  document.getElementById('resultTags').innerHTML = tagsHTML;
+
+  var flowShort = flow ? flow.replace('할 때','') : '의미 있는 활동';
+  var pathStr = pathway.slice(0,2).map(function(p){return pathMap[p]||p;}).join('·') || '소명 방향';
+  document.getElementById('resultNarrative').textContent = domain + ' 분야 ' + age + '로서, ' + flowShort + '에서 에너지를 얻는 당신은 ' + pathStr + ' 방향에 잘 맞습니다.';
+
+  var axes = [
+    {label:'전문 역량', keys:['sl_strat','sl_digital','sl_cross','sl_facil','sl_network','sl_conflict'], max:30},
+    {label:'성품 깊이', keys:['ch_persist','ch_empathy','ch_curiosity','ch_courage','ch_humility','ch_initiative'], max:30},
+    {label:'가치관 명확성', keys:['v_service','v_truth','v_family','v_justice','v_faith','v_achiev'], max:30},
+    {label:'소명 준비도', keys:['cr_know','cr_burden','cr_serve','cr_affirm','cr_lead'], max:25},
+  ];
+  var axisHTML = '';
+  axes.forEach(function(ax) {
+    var total = 0;
+    ax.keys.forEach(function(k){ total += (ans[k]||3); });
+    var pct = Math.round((total/ax.max)*100);
+    axisHTML += '<div class="axis-row"><span class="axis-lbl">' + ax.label + '</span><div class="axis-track"><div class="axis-bar" style="width:0%" data-w="' + pct + '%"></div></div><span class="axis-pct">' + pct + '%</span></div>';
+  });
+  document.getElementById('axisResults').innerHTML = axisHTML;
+  setTimeout(function(){
+    document.querySelectorAll('.axis-bar').forEach(function(b){ b.style.width = b.getAttribute('data-w'); });
+  }, 120);
+
+  var v1 = ans['vs1']||'나의 전문성', v2 = ans['vs2']||'섬길 사람들', v3 = ans['vs3']||'가치', v4 = ans['vs4']||'하나님의 나라';
+  document.getElementById('visionResult').textContent = '"나는 ' + v1 + '을(를) 통해 ' + v2 + '에게 ' + v3 + '을(를) 전달함으로써 ' + v4 + '을(를) 이루고 싶다."';
+}
+
+function saveResult() {
+  if (window.storage) {
+    var key = 'profile:' + Date.now();
+    var data = JSON.stringify({id:key, timestamp:new Date().toISOString(), answers:ans});
+    window.storage.set(key, data).then(function(){ showToast('저장 완료!'); }).catch(function(){ showToast('저장 중 오류가 났어요'); });
+  } else {
+    showToast('저장 완료!');
+  }
+}
+
+function generateReport() {
+  var v1=ans['vs1']||'', v2=ans['vs2']||'', v3=ans['vs3']||'', v4=ans['vs4']||'';
+  var pathArr = ans['pathway']||[];
+  var giftArr = ans['gifts']||[];
+  var popArr = ans['population']||[];
+  var suppArr = ans['support']||[];
+  var charParts = ['ch_persist','ch_empathy','ch_curiosity','ch_courage','ch_humility','ch_initiative'].map(function(k){ return k.replace('ch_','')+'='+(ans[k]||3); });
+  var prompt = '[소명 진단 AI 리포트 요청]\n\n기본 정보\n나이: ' + (ans['age']||'-') + '\n경력: ' + (ans['domain']||[]).join(', ') + '\n전환 시점: ' + (ans['horizon']||'-') + '\n가용 시간: ' + (ans['time']||'-') + '\n\n역량\n핵심 기술: ' + (ans['skills']||[]).join(', ') + '\n성품 점수: ' + charParts.join(', ') + '\n결정 방식: ' + (ans['decision']||'-') + '\n\n동기와 가치\n동기: ' + (ans['motivators']||[]).join(', ') + '\n몰입 상황: ' + (ans['flow']||'-') + '\n도전 성향: ' + (ans['risk']||'-') + '\n\n믿음과 은사\n은사: ' + giftArr.join(', ') + '\n믿음 단계: ' + (ans['spiritual']||'-') + '\n사역 환경: ' + (ans['setting']||'-') + '\n\n소명 비전\n대상: ' + popArr.join(', ') + '\n방향: ' + pathArr.join(', ') + '\n선언문: "나는 ' + v1 + '을 통해 ' + v2 + '에게 ' + v3 + '을 전달함으로써 ' + v4 + '을 이루고 싶다."\n걸림돌: ' + (ans['obstacle']||'-') + '\n필요 지원: ' + suppArr.join(', ') + '\n\n위 데이터를 바탕으로 한국어로 개인화된 소명 진단서를 작성해 주세요. (1) 소명 이야기 2단락, (2) 핵심 강점 3가지, (3) 추천 소명 방향 TOP 3, (4) 첫 90일 실행 계획 3단계, (5) 예상 어려움과 대처 방법.';
+  if (typeof sendPrompt === 'function') {
+    sendPrompt(prompt);
+  } else {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(prompt).then(function(){ showToast('클립보드에 복사되었어요'); });
+    } else {
+      showToast('AI 진단서 생성 준비 완료');
+    }
+  }
+}
+
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 2500);
+}
+
+// ── BOOT ──
+document.getElementById('startBtn').addEventListener('click', startAssessment);
+document.getElementById('nextBtn').addEventListener('click', nextStep);
+document.getElementById('backBtn').addEventListener('click', prevStep);
+document.getElementById('topBackBtn').addEventListener('click', function() {
+  if (step === 0) {
+    document.getElementById('mainShell').style.display = 'none';
+    document.getElementById('welcomeScreen').classList.remove('hidden');
+  } else {
+    prevStep();
+  }
+});
+document.getElementById('resultBackBtn').addEventListener('click', function() {
+  document.getElementById('resultSection').classList.remove('show');
+  document.getElementById('mainShell').style.display = 'flex';
+  step = STEPS.length - 1;
+  render();
+});
+document.getElementById('saveBtn').addEventListener('click', saveResult);
+document.getElementById('aiBtn').addEventListener('click', generateReport);
+</script>
+</body>
+</html>
